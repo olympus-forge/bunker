@@ -4,7 +4,7 @@ type ApplicationError struct {
 	Code           AppErrorCode `json:"code"`
 	HttpStatusCode int          `json:"http_status_code"`
 	ErrorCode      string       `json:"error_code"`
-	Error          error        `json:"error"`
+	Errors         error        `json:"error,omitempty"`
 	Message        string       `json:"message"`
 }
 
@@ -14,7 +14,7 @@ func New(code AppErrorCode) *ApplicationError {
 
 func (ae *ApplicationError) SetError(err error) *ApplicationError {
 	if err != nil {
-		ae.Error = err
+		ae.Errors = err
 	}
 	return ae
 }
@@ -24,4 +24,8 @@ func (ae *ApplicationError) SetMessage(msg string) *ApplicationError {
 		ae.Message = msg
 	}
 	return ae
+}
+
+func (ae *ApplicationError) Error() string {
+	return ae.Message
 }

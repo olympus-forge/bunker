@@ -20,11 +20,11 @@ func TestBunkerError(t *testing.T) {
 
 	newError := fmt.Errorf("%s", BadRequest.ErrorCode)
 	errBadRequest.SetError(newError)
-	if errBadRequest.Error == nil {
+	if errBadRequest.Errors == nil {
 		t.Error("error must not nil value")
 	}
 
-	if errBadRequest.Error != newError {
+	if errBadRequest.Errors != newError {
 		t.Error("invalid error")
 	}
 
