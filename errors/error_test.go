@@ -1,7 +1,6 @@
 package bunker
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 )
@@ -18,17 +17,8 @@ func TestBunkerError(t *testing.T) {
 		t.Errorf("Invalid http status code [%v] not equal http status bad requests", errBadRequest.HttpStatusCode)
 	}
 
-	newError := fmt.Errorf("%s", BadRequest.ErrorCode)
-	errBadRequest.SetError(newError)
-	if errBadRequest.Errors == nil {
-		t.Error("error must not nil value")
-	}
-
-	if errBadRequest.Errors != newError {
-		t.Error("invalid error")
-	}
-
-	if errBadRequest.ErrorCode != BadRequest.ErrorCode {
+	errBadRequest.SetErrorCode("IE-01X")
+	if errBadRequest.ErrorCode != "IE-01X" {
 		t.Error("invalid error code")
 	}
 

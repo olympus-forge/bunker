@@ -12,9 +12,9 @@ func New(code AppErrorCode) *ApplicationError {
 	return getApplicationError(code)
 }
 
-func (ae *ApplicationError) SetError(err error) *ApplicationError {
-	if err != nil {
-		ae.Errors = err
+func (ae *ApplicationError) SetErrorCode(code string) *ApplicationError {
+	if code != "" {
+		ae.ErrorCode = code
 	}
 	return ae
 }
