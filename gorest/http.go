@@ -52,7 +52,6 @@ type Requester struct {
 
 	token         string
 	Header        map[string][]string
-	basicAuth     map[string]string
 	hasBasicAuth  bool
 	basicAuthUser string
 	basicAuthPass string
@@ -86,7 +85,6 @@ func New(host string) *Requester {
 		Header:    make(map[string][]string),
 		FormData:  make(url.Values),
 		QueryData: make(url.Values),
-		basicAuth: make(map[string]string),
 	}
 }
 
@@ -108,7 +106,6 @@ func (base *Requester) SetBasicAuth(username, password string) *Requester {
 	base.hasBasicAuth = true
 	base.basicAuthUser = username
 	base.basicAuthPass = password
-	base.basicAuth[username] = password
 	return base
 }
 
@@ -147,27 +144,6 @@ func (base *Requester) SetHeaders(headers interface{}) *Requester {
 		}
 	default:
 		base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", headers))
-	}
-	return base
-}
-
-func (base *Requester) setMapStringHeaders(headers map[string][]string) *Requester {
-	for k, v := range headers {
-		base.Header[k] = v
-	}
-	return base
-}
-
-func (base *Requester) setMapAnyHeaders(headers map[string]interface{}) *Requester {
-	for k, v := range headers {
-		switch value := v.(type) {
-		case string:
-			base.Header[k] = []string{value}
-		case []string:
-			base.Header[k] = value
-		default:
-			base.Header[k] = []string{fmt.Sprint(value)}
-		}
 	}
 	return base
 }
@@ -283,11 +259,6 @@ func (base *Requester) initRequest() *Requester {
 	}
 	if base.hasBasicAuth {
 		request.SetBasicAuth(base.basicAuthUser, base.basicAuthPass)
-	} else if len(base.basicAuth) > 0 {
-		for user, pass := range base.basicAuth {
-			request.SetBasicAuth(user, pass)
-			break
-		}
 	}
 	if !bunker.IsEmptyString(base.token) {
 		request.Header.Set(Auth, Bearer+base.token)
@@ -503,22 +474,6 @@ func (base *Requester) queryMap(input map[string]string) *Requester {
 	return base
 }
 
-func (base *Requester) setBodyMap(input interface{}) {
-	base.SetPayload(input)
-}
-
-func (base *Requester) setBodyMapString(input interface{}) *Requester {
-	return base.SetPayload(input)
-}
-
-func (base *Requester) setBodyStruct(input interface{}) *Requester {
-	return base.SetPayload(input)
-}
-
-func (base *Requester) setBodyString(input interface{}) *Requester {
-	return base.SetPayload(input)
-}
-
 func (base *Requester) debug() string {
 	if base.Request != nil {
 		var responseBody string
@@ -570,7 +525,7 @@ func (base *Requester) debug() string {
 	}
 }
 
-func (base *Requester) headerToString() (result string) {
+func (base *Requester) headerToString() string {
 	if base.Request != nil && base.Request.Header != nil {
 		header, _ := json.Marshal(base.Request.Header)
 		return string(header)

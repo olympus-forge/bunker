@@ -278,10 +278,6 @@ func newApplicationError(code AppErrorCode) *ApplicationError {
 	}
 }
 
-func getApplicationError(code AppErrorCode) *ApplicationError {
-	return newApplicationError(code)
-}
-
 var (
 	BadRequest                   = newApplicationError(StatusBadRequest)
 	UnAuthorized                 = newApplicationError(StatusUnAuthorized)

@@ -24,12 +24,7 @@ func New() *GoTimes {
 	}
 }
 
-// newTime maintains backward compatibility with internal callers.
-func newTime() GoTimesImpl {
-	return New()
-}
-
-func (gt *GoTimes) isWeekend(d time.Time) (w bool) {
+func (gt *GoTimes) isWeekend(d time.Time) bool {
 	return gt.weekend[int(d.Weekday())]
 }
 
@@ -46,7 +41,7 @@ func (gt *GoTimes) SetHolidays(h []time.Time) *GoTimes {
 	return gt
 }
 
-func (gt *GoTimes) AddWeekDay(sla int) (t time.Time) {
+func (gt *GoTimes) AddWeekDay(sla int) time.Time {
 	if sla <= 0 {
 		return gt.today
 	}
@@ -75,7 +70,7 @@ func (gt *GoTimes) isOffDay(d time.Time) bool {
 	return false
 }
 
-func (gt *GoTimes) addDate(year, month, day int) (t time.Time) {
+func (gt *GoTimes) addDate(year, month, day int) time.Time {
 	return gt.today.AddDate(year, month, day)
 }
 
