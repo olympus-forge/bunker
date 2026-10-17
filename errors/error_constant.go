@@ -1,4 +1,4 @@
-package bunker
+package errors
 
 import "net/http"
 
@@ -34,137 +34,161 @@ const (
 	StatusTooManyRequests
 	StatusRequestHeaderFieldsTooLarge
 	StatusUnavailableForLegalReasons
+	StatusInternalServerError
+	StatusNotImplemented
+	StatusBadGateway
+	StatusServiceUnavailable
+	StatusGatewayTimeout
 )
 
-func errorCode(code AppErrorCode) string {
-	var codex map[AppErrorCode]string = map[AppErrorCode]string{
-		StatusBadRequest:                   "IE-01",
-		StatusUnAuthorized:                 "IE-02",
-		StatusPaymentRequired:              "IE-03",
-		StatusForbidden:                    "IE-04",
-		StatusNotFound:                     "IE-05",
-		StatusMethodNotAllowed:             "IE-06",
-		StatusNotAcceptable:                "IE-07",
-		StatusProxyAuthRequired:            "IE-08",
-		StatusRequestTimeout:               "IE-09",
-		StatusConflict:                     "IE-10",
-		StatusGone:                         "IE-11",
-		StatusLengthRequired:               "IE-12",
-		StatusPreconditionFailed:           "IE-13",
-		StatusRequestEntityTooLarge:        "IE-14",
-		StatusRequestURITooLong:            "IE-15",
-		StatusUnsupportedMediaType:         "IE-16",
-		StatusRequestedRangeNotSatisfiable: "IE-17",
-		StatusExpectationFailed:            "IE-18",
-		StatusTeapot:                       "IE-19",
-		StatusMisdirectedRequest:           "IE-20",
-		StatusUnprocessableEntity:          "IE-21",
-		StatusLocked:                       "IE-22",
-		StatusFailedDependency:             "IE-23",
-		StatusTooEarly:                     "IE-24",
-		StatusUpgradeRequired:              "IE-25",
-		StatusPreconditionRequired:         "IE-26",
-		StatusTooManyRequests:              "IE-27",
-		StatusRequestHeaderFieldsTooLarge:  "IE-28",
-		StatusUnavailableForLegalReasons:   "IE-29",
-	}
-	return codex[code]
-}
-
-var (
-	BadRequest                   = &ApplicationError{Code: StatusBadRequest, HttpStatusCode: http.StatusBadRequest, ErrorCode: errorCode(StatusBadRequest), Message: message(StatusBadRequest)}
-	UnAuthorized                 = &ApplicationError{Code: StatusUnAuthorized, HttpStatusCode: http.StatusUnauthorized, ErrorCode: errorCode(StatusUnAuthorized), Message: message(StatusUnAuthorized)}
-	PaymentRequired              = &ApplicationError{Code: StatusPaymentRequired, HttpStatusCode: http.StatusPaymentRequired, ErrorCode: errorCode(StatusPaymentRequired), Message: message(StatusPaymentRequired)}
-	Forbidden                    = &ApplicationError{Code: StatusForbidden, HttpStatusCode: http.StatusForbidden, ErrorCode: errorCode(StatusForbidden), Message: message(StatusForbidden)}
-	NotFound                     = &ApplicationError{Code: StatusNotFound, HttpStatusCode: http.StatusNotFound, ErrorCode: errorCode(StatusNotFound), Message: message(StatusNotFound)}
-	MethodNotAllowed             = &ApplicationError{Code: StatusMethodNotAllowed, HttpStatusCode: http.StatusMethodNotAllowed, ErrorCode: errorCode(StatusMethodNotAllowed), Message: message(StatusMethodNotAllowed)}
-	NotAcceptable                = &ApplicationError{Code: StatusNotAcceptable, HttpStatusCode: http.StatusNotAcceptable, ErrorCode: errorCode(StatusNotAcceptable), Message: message(StatusNotAcceptable)}
-	ProxyAuthRequired            = &ApplicationError{Code: StatusProxyAuthRequired, HttpStatusCode: http.StatusProxyAuthRequired, ErrorCode: errorCode(StatusProxyAuthRequired), Message: message(StatusProxyAuthRequired)}
-	RequestTimeout               = &ApplicationError{Code: StatusRequestTimeout, HttpStatusCode: http.StatusRequestTimeout, ErrorCode: errorCode(StatusRequestTimeout), Message: message(StatusRequestTimeout)}
-	Conflict                     = &ApplicationError{Code: StatusConflict, HttpStatusCode: http.StatusConflict, ErrorCode: errorCode(StatusConflict), Message: message(StatusConflict)}
-	Gone                         = &ApplicationError{Code: StatusGone, HttpStatusCode: http.StatusGone, ErrorCode: errorCode(StatusGone), Message: message(StatusGone)}
-	LengthRequired               = &ApplicationError{Code: StatusLengthRequired, HttpStatusCode: http.StatusLengthRequired, ErrorCode: errorCode(StatusLengthRequired), Message: message(StatusLengthRequired)}
-	PreconditionFailed           = &ApplicationError{Code: StatusPreconditionFailed, HttpStatusCode: http.StatusPreconditionFailed, ErrorCode: errorCode(StatusPreconditionFailed), Message: message(StatusPreconditionFailed)}
-	RequestEntityTooLarge        = &ApplicationError{Code: StatusRequestEntityTooLarge, HttpStatusCode: http.StatusRequestEntityTooLarge, ErrorCode: errorCode(StatusRequestEntityTooLarge), Message: message(StatusRequestEntityTooLarge)}
-	RequestURITooLong            = &ApplicationError{Code: StatusRequestURITooLong, HttpStatusCode: http.StatusRequestURITooLong, ErrorCode: errorCode(StatusRequestURITooLong), Message: message(StatusRequestURITooLong)}
-	UnsupportedMediaType         = &ApplicationError{Code: StatusUnsupportedMediaType, HttpStatusCode: http.StatusUnsupportedMediaType, ErrorCode: errorCode(StatusUnsupportedMediaType), Message: message(StatusUnsupportedMediaType)}
-	RequestedRangeNotSatisfiable = &ApplicationError{Code: StatusRequestedRangeNotSatisfiable, HttpStatusCode: http.StatusRequestedRangeNotSatisfiable, ErrorCode: errorCode(StatusRequestedRangeNotSatisfiable), Message: message(StatusRequestedRangeNotSatisfiable)}
-	ExpectationFailed            = &ApplicationError{Code: StatusExpectationFailed, HttpStatusCode: http.StatusExpectationFailed, ErrorCode: errorCode(StatusExpectationFailed), Message: message(StatusExpectationFailed)}
-	Teapot                       = &ApplicationError{Code: StatusTeapot, HttpStatusCode: http.StatusTeapot, ErrorCode: errorCode(StatusTeapot), Message: message(StatusTeapot)}
-	MisdirectedRequest           = &ApplicationError{Code: StatusMisdirectedRequest, HttpStatusCode: http.StatusMisdirectedRequest, ErrorCode: errorCode(StatusMisdirectedRequest), Message: message(StatusMisdirectedRequest)}
-	UnprocessableEntity          = &ApplicationError{Code: StatusUnprocessableEntity, HttpStatusCode: http.StatusUnprocessableEntity, ErrorCode: errorCode(StatusUnprocessableEntity), Message: message(StatusUnprocessableEntity)}
-	Locked                       = &ApplicationError{Code: StatusLocked, HttpStatusCode: http.StatusLocked, ErrorCode: errorCode(StatusLocked), Message: message(StatusLocked)}
-	FailedDependency             = &ApplicationError{Code: StatusFailedDependency, HttpStatusCode: http.StatusFailedDependency, ErrorCode: errorCode(StatusFailedDependency), Message: message(StatusFailedDependency)}
-	TooEarly                     = &ApplicationError{Code: StatusTooEarly, HttpStatusCode: http.StatusTooEarly, ErrorCode: errorCode(StatusTooEarly), Message: message(StatusTooEarly)}
-	UpgradeRequired              = &ApplicationError{Code: StatusUpgradeRequired, HttpStatusCode: http.StatusUpgradeRequired, ErrorCode: errorCode(StatusUpgradeRequired), Message: message(StatusUpgradeRequired)}
-	PreconditionRequired         = &ApplicationError{Code: StatusPreconditionRequired, HttpStatusCode: http.StatusPreconditionRequired, ErrorCode: errorCode(StatusPreconditionRequired), Message: message(StatusPreconditionRequired)}
-	TooManyRequests              = &ApplicationError{Code: StatusTooManyRequests, HttpStatusCode: http.StatusTooManyRequests, ErrorCode: errorCode(StatusTooManyRequests), Message: message(StatusTooManyRequests)}
-	RequestHeaderFieldsTooLarge  = &ApplicationError{Code: StatusRequestHeaderFieldsTooLarge, HttpStatusCode: http.StatusRequestHeaderFieldsTooLarge, ErrorCode: errorCode(StatusRequestHeaderFieldsTooLarge), Message: message(StatusRequestHeaderFieldsTooLarge)}
-	UnavailableForLegalReasons   = &ApplicationError{Code: StatusUnavailableForLegalReasons, HttpStatusCode: http.StatusUnavailableForLegalReasons, ErrorCode: errorCode(StatusUnavailableForLegalReasons), Message: message(StatusUnavailableForLegalReasons)}
-)
-
-func getApplicationError(code AppErrorCode) *ApplicationError {
+func httpStatusCode(code AppErrorCode) int {
 	switch code {
 	case StatusBadRequest:
-		return BadRequest
+		return http.StatusBadRequest
 	case StatusUnAuthorized:
-		return UnAuthorized
+		return http.StatusUnauthorized
 	case StatusPaymentRequired:
-		return PaymentRequired
+		return http.StatusPaymentRequired
 	case StatusForbidden:
-		return Forbidden
+		return http.StatusForbidden
 	case StatusNotFound:
-		return NotFound
+		return http.StatusNotFound
 	case StatusMethodNotAllowed:
-		return MethodNotAllowed
+		return http.StatusMethodNotAllowed
 	case StatusNotAcceptable:
-		return NotAcceptable
+		return http.StatusNotAcceptable
 	case StatusProxyAuthRequired:
-		return ProxyAuthRequired
+		return http.StatusProxyAuthRequired
 	case StatusRequestTimeout:
-		return RequestTimeout
+		return http.StatusRequestTimeout
 	case StatusConflict:
-		return Conflict
+		return http.StatusConflict
 	case StatusGone:
-		return Gone
+		return http.StatusGone
 	case StatusLengthRequired:
-		return LengthRequired
+		return http.StatusLengthRequired
 	case StatusPreconditionFailed:
-		return PreconditionFailed
+		return http.StatusPreconditionFailed
 	case StatusRequestEntityTooLarge:
-		return RequestEntityTooLarge
+		return http.StatusRequestEntityTooLarge
 	case StatusRequestURITooLong:
-		return RequestURITooLong
+		return http.StatusRequestURITooLong
 	case StatusUnsupportedMediaType:
-		return UnsupportedMediaType
+		return http.StatusUnsupportedMediaType
 	case StatusRequestedRangeNotSatisfiable:
-		return RequestedRangeNotSatisfiable
+		return http.StatusRequestedRangeNotSatisfiable
 	case StatusExpectationFailed:
-		return ExpectationFailed
+		return http.StatusExpectationFailed
 	case StatusTeapot:
-		return Teapot
+		return http.StatusTeapot
 	case StatusMisdirectedRequest:
-		return MisdirectedRequest
+		return http.StatusMisdirectedRequest
 	case StatusUnprocessableEntity:
-		return UnprocessableEntity
+		return http.StatusUnprocessableEntity
 	case StatusLocked:
-		return Locked
+		return http.StatusLocked
 	case StatusFailedDependency:
-		return FailedDependency
+		return http.StatusFailedDependency
 	case StatusTooEarly:
-		return TooEarly
+		return http.StatusTooEarly
 	case StatusUpgradeRequired:
-		return UpgradeRequired
+		return http.StatusUpgradeRequired
 	case StatusPreconditionRequired:
-		return PreconditionRequired
+		return http.StatusPreconditionRequired
 	case StatusTooManyRequests:
-		return TooManyRequests
+		return http.StatusTooManyRequests
 	case StatusRequestHeaderFieldsTooLarge:
-		return RequestHeaderFieldsTooLarge
+		return http.StatusRequestHeaderFieldsTooLarge
 	case StatusUnavailableForLegalReasons:
-		return UnavailableForLegalReasons
+		return http.StatusUnavailableForLegalReasons
+	case StatusInternalServerError:
+		return http.StatusInternalServerError
+	case StatusNotImplemented:
+		return http.StatusNotImplemented
+	case StatusBadGateway:
+		return http.StatusBadGateway
+	case StatusServiceUnavailable:
+		return http.StatusServiceUnavailable
+	case StatusGatewayTimeout:
+		return http.StatusGatewayTimeout
+	default:
+		return 0
 	}
-	return nil
+}
+
+func errorCode(code AppErrorCode) string {
+	switch code {
+	case StatusBadRequest:
+		return "IE-01"
+	case StatusUnAuthorized:
+		return "IE-02"
+	case StatusPaymentRequired:
+		return "IE-03"
+	case StatusForbidden:
+		return "IE-04"
+	case StatusNotFound:
+		return "IE-05"
+	case StatusMethodNotAllowed:
+		return "IE-06"
+	case StatusNotAcceptable:
+		return "IE-07"
+	case StatusProxyAuthRequired:
+		return "IE-08"
+	case StatusRequestTimeout:
+		return "IE-09"
+	case StatusConflict:
+		return "IE-10"
+	case StatusGone:
+		return "IE-11"
+	case StatusLengthRequired:
+		return "IE-12"
+	case StatusPreconditionFailed:
+		return "IE-13"
+	case StatusRequestEntityTooLarge:
+		return "IE-14"
+	case StatusRequestURITooLong:
+		return "IE-15"
+	case StatusUnsupportedMediaType:
+		return "IE-16"
+	case StatusRequestedRangeNotSatisfiable:
+		return "IE-17"
+	case StatusExpectationFailed:
+		return "IE-18"
+	case StatusTeapot:
+		return "IE-19"
+	case StatusMisdirectedRequest:
+		return "IE-20"
+	case StatusUnprocessableEntity:
+		return "IE-21"
+	case StatusLocked:
+		return "IE-22"
+	case StatusFailedDependency:
+		return "IE-23"
+	case StatusTooEarly:
+		return "IE-24"
+	case StatusUpgradeRequired:
+		return "IE-25"
+	case StatusPreconditionRequired:
+		return "IE-26"
+	case StatusTooManyRequests:
+		return "IE-27"
+	case StatusRequestHeaderFieldsTooLarge:
+		return "IE-28"
+	case StatusUnavailableForLegalReasons:
+		return "IE-29"
+	case StatusInternalServerError:
+		return "IE-30"
+	case StatusNotImplemented:
+		return "IE-31"
+	case StatusBadGateway:
+		return "IE-32"
+	case StatusServiceUnavailable:
+		return "IE-33"
+	case StatusGatewayTimeout:
+		return "IE-34"
+	default:
+		return ""
+	}
 }
 
 func message(code AppErrorCode) string {
@@ -224,9 +248,73 @@ func message(code AppErrorCode) string {
 	case StatusTooManyRequests:
 		return "Too Many Requests"
 	case StatusRequestHeaderFieldsTooLarge:
-		return "Request Header Fields TooLarge"
+		return "Request Header Fields Too Large"
 	case StatusUnavailableForLegalReasons:
 		return "Unavailable For Legal Reasons"
+	case StatusInternalServerError:
+		return "Internal Server Error"
+	case StatusNotImplemented:
+		return "Not Implemented"
+	case StatusBadGateway:
+		return "Bad Gateway"
+	case StatusServiceUnavailable:
+		return "Service Unavailable"
+	case StatusGatewayTimeout:
+		return "Gateway Timeout"
 	}
 	return ""
 }
+
+func newApplicationError(code AppErrorCode) *ApplicationError {
+	statusCode := httpStatusCode(code)
+	if statusCode == 0 {
+		return nil
+	}
+	return &ApplicationError{
+		Code:           code,
+		HttpStatusCode: statusCode,
+		ErrorCode:      errorCode(code),
+		Message:        message(code),
+	}
+}
+
+func getApplicationError(code AppErrorCode) *ApplicationError {
+	return newApplicationError(code)
+}
+
+var (
+	BadRequest                   = newApplicationError(StatusBadRequest)
+	UnAuthorized                 = newApplicationError(StatusUnAuthorized)
+	PaymentRequired              = newApplicationError(StatusPaymentRequired)
+	Forbidden                    = newApplicationError(StatusForbidden)
+	NotFound                     = newApplicationError(StatusNotFound)
+	MethodNotAllowed             = newApplicationError(StatusMethodNotAllowed)
+	NotAcceptable                = newApplicationError(StatusNotAcceptable)
+	ProxyAuthRequired            = newApplicationError(StatusProxyAuthRequired)
+	RequestTimeout               = newApplicationError(StatusRequestTimeout)
+	Conflict                     = newApplicationError(StatusConflict)
+	Gone                         = newApplicationError(StatusGone)
+	LengthRequired               = newApplicationError(StatusLengthRequired)
+	PreconditionFailed           = newApplicationError(StatusPreconditionFailed)
+	RequestEntityTooLarge        = newApplicationError(StatusRequestEntityTooLarge)
+	RequestURITooLong            = newApplicationError(StatusRequestURITooLong)
+	UnsupportedMediaType         = newApplicationError(StatusUnsupportedMediaType)
+	RequestedRangeNotSatisfiable = newApplicationError(StatusRequestedRangeNotSatisfiable)
+	ExpectationFailed            = newApplicationError(StatusExpectationFailed)
+	Teapot                       = newApplicationError(StatusTeapot)
+	MisdirectedRequest           = newApplicationError(StatusMisdirectedRequest)
+	UnprocessableEntity          = newApplicationError(StatusUnprocessableEntity)
+	Locked                       = newApplicationError(StatusLocked)
+	FailedDependency             = newApplicationError(StatusFailedDependency)
+	TooEarly                     = newApplicationError(StatusTooEarly)
+	UpgradeRequired              = newApplicationError(StatusUpgradeRequired)
+	PreconditionRequired         = newApplicationError(StatusPreconditionRequired)
+	TooManyRequests              = newApplicationError(StatusTooManyRequests)
+	RequestHeaderFieldsTooLarge  = newApplicationError(StatusRequestHeaderFieldsTooLarge)
+	UnavailableForLegalReasons   = newApplicationError(StatusUnavailableForLegalReasons)
+	InternalServerError          = newApplicationError(StatusInternalServerError)
+	NotImplemented               = newApplicationError(StatusNotImplemented)
+	BadGateway                   = newApplicationError(StatusBadGateway)
+	ServiceUnavailable           = newApplicationError(StatusServiceUnavailable)
+	GatewayTimeout               = newApplicationError(StatusGatewayTimeout)
+)

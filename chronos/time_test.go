@@ -1,4 +1,4 @@
-package bunker
+package chronos
 
 import (
 	"testing"
@@ -14,15 +14,35 @@ func TestBunkerTime(t *testing.T) {
 			t.Errorf("invalid addWeekDay\n\tExpected : %v\n\tActual : %v", expected, actualUnsetHoliday)
 		}
 
-		// Holidays in Indonesia
-		// The Prophet Muhammad's Birthday,
-		exampleHoliday, _ := time.Parse("2006-01-02", "2022-10-08")
-		actualUnsetTodayAndHolidays := AddWeekDay(7, &today, []time.Time{
-			exampleHoliday,
+		// Holiday on a weekend (2022-10-08 is Saturday) - should not double-skip
+		weekendHoliday, _ := time.Parse("2006-01-02", "2022-10-08")
+		actualWeekendHoliday := AddWeekDay(7, &today, []time.Time{
+			weekendHoliday,
 		}).Format("2006-01-02")
-		if actualUnsetTodayAndHolidays != expected {
-			t.Errorf("invalid addWeekDay\n\tExpected : %v\n\tActual : %v", expected, actualUnsetTodayAndHolidays)
+		if actualWeekendHoliday != expected {
+			t.Errorf("invalid addWeekDay with weekend holiday\n\tExpected : %v\n\tActual : %v", expected, actualWeekendHoliday)
+		}
+
+		// Holiday on a weekday (2022-10-05 is Wednesday) - should push SLA to 2022-10-13
+		weekdayHoliday, _ := time.Parse("2006-01-02", "2022-10-05")
+		expectedWithHoliday := "2022-10-13"
+		actualWeekdayHoliday := AddWeekDay(7, &today, []time.Time{
+			weekdayHoliday,
+		}).Format("2006-01-02")
+		if actualWeekdayHoliday != expectedWithHoliday {
+			t.Errorf("invalid addWeekDay with weekday holiday\n\tExpected : %v\n\tActual : %v", expectedWithHoliday, actualWeekdayHoliday)
+		}
+
+		// Zero SLA should return today, not zero time 0001-01-01
+		actualZeroSla := AddWeekDay(0, &today, nil).Format("2006-01-02")
+		if actualZeroSla != "2022-10-03" {
+			t.Errorf("invalid addWeekDay for 0 sla\n\tExpected : 2022-10-03\n\tActual : %v", actualZeroSla)
+		}
+
+		// Test fluent New() chaining
+		fluentDate := New().SetToday(&today).SetHolidays([]time.Time{weekdayHoliday}).AddWeekDay(7).Format("2006-01-02")
+		if fluentDate != expectedWithHoliday {
+			t.Errorf("invalid fluent AddWeekDay\n\tExpected : %v\n\tActual : %v", expectedWithHoliday, fluentDate)
 		}
 	})
-
 }

@@ -51,7 +51,7 @@ import (
 	"fmt"
 	"time"
 
-	bunker "github.com/olympus-forge/bunker/chronos"
+	"github.com/olympus-forge/bunker/chronos"
 )
 
 func main() {
@@ -63,8 +63,12 @@ func main() {
 	}
 
 	// Calculate date after 5 working days
-	targetDate := bunker.AddWeekDay(5, &today, holidays)
+	targetDate := chronos.AddWeekDay(5, &today, holidays)
 	fmt.Println("SLA Due Date:", targetDate.Format("2006-01-02"))
+
+	// Or use fluent chaining
+	dueDate := chronos.New().SetToday(&today).SetHolidays(holidays).AddWeekDay(5)
+	fmt.Println("Fluent Due Date:", dueDate.Format("2006-01-02"))
 }
 ```
 
@@ -79,14 +83,13 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 
-	bunker "github.com/olympus-forge/bunker/errors"
+	"github.com/olympus-forge/bunker/errors"
 )
 
 func main() {
 	// Create from predefined HTTP error constants
-	err := bunker.New(bunker.StatusBadRequest)
+	err := errors.New(errors.StatusBadRequest)
 
 	// Customize error code and message
 	err.SetErrorCode("AUTH-4001").SetMessage("Invalid user credentials provided")
@@ -97,7 +100,7 @@ func main() {
 }
 ```
 
-Pre-defined error variables include `BadRequest`, `UnAuthorized`, `Forbidden`, `NotFound`, `Conflict`, `UnprocessableEntity`, `TooManyRequests`, and more.
+Pre-defined error constants include `BadRequest`, `UnAuthorized`, `Forbidden`, `NotFound`, `Conflict`, `UnprocessableEntity`, `TooManyRequests`, `InternalServerError`, `BadGateway`, `ServiceUnavailable`, and more.
 
 ---
 
@@ -112,7 +115,7 @@ import (
 	"fmt"
 	"time"
 
-	bunker "github.com/olympus-forge/bunker/gorest"
+	"github.com/olympus-forge/bunker/gorest"
 )
 
 type CreateUserRequest struct {
@@ -121,7 +124,7 @@ type CreateUserRequest struct {
 }
 
 func main() {
-	client := bunker.New("https://api.example.com")
+	client := gorest.New("https://api.example.com")
 
 	// GET Request with Query Parameters & Custom Headers
 	resp := client.Get().
@@ -148,11 +151,11 @@ func main() {
 		Email: "john@example.com",
 	}
 
-	postResp := bunker.New("https://api.example.com").
+	postResp := gorest.New("https://api.example.com").
 		Post().
 		AddPath("/v1/users").
 		SetToken("your-jwt-token").
-		SetPayload(payload).
+		SetPayload(&payload).
 		Do()
 
 	if postResp.HaveError() {

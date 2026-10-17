@@ -1,4 +1,4 @@
-package bunker
+package gorest
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yudhiana/bunker"
+	"github.com/olympus-forge/bunker"
 
 	"golang.org/x/net/publicsuffix"
 )
@@ -36,8 +36,8 @@ const (
 const (
 	Json       string = "application/json"
 	UrlEncoded string = "application/x-www-form-urlencoded"
-	Form       string = "application/x-www-form-urlencoded"
-	FormData   string = "application/x-www-form-urlencoded"
+	Form       string = "multipart/form-data"
+	FormData   string = "multipart/form-data"
 )
 
 const (
@@ -50,9 +50,12 @@ type Requester struct {
 	BaseUrl string
 	Method  string
 
-	token     string
-	Header    map[string][]string
-	basicAuth map[string]string
+	token         string
+	Header        map[string][]string
+	basicAuth     map[string]string
+	hasBasicAuth  bool
+	basicAuthUser string
+	basicAuthPass string
 
 	FormData  url.Values
 	QueryData url.Values
@@ -73,7 +76,8 @@ type Requester struct {
 	timeRequest time.Duration
 	timeIn      time.Time
 
-	body io.Reader
+	body      io.Reader
+	bodyBytes []byte
 }
 
 func New(host string) *Requester {
@@ -101,6 +105,9 @@ func (base *Requester) SetContext(ctx context.Context) *Requester {
 }
 
 func (base *Requester) SetBasicAuth(username, password string) *Requester {
+	base.hasBasicAuth = true
+	base.basicAuthUser = username
+	base.basicAuthPass = password
 	base.basicAuth[username] = password
 	return base
 }
@@ -110,56 +117,75 @@ func (base *Requester) SetToken(token string) *Requester {
 	return base
 }
 
-//	Header := map[string][]string{
-//				"Accept-Encoding": {"gzip, deflate"},
-//				"Accept-Language": {"en-us"},
-//				"Foo": {"Bar", "two"},
-//			}
 func (base *Requester) SetHeaders(headers interface{}) *Requester {
-	switch kind := reflect.ValueOf(headers); kind.Kind() {
-	case reflect.Map:
-		switch typeOf := kind.Interface().(type) {
-		case map[string][]string:
-			base.setMapStringHeaders(typeOf)
-		case map[string]interface{}:
-			base.setMapAnyHeaders(typeOf)
-		default:
-			base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", reflect.TypeOf(typeOf)))
+	if headers == nil {
+		return base
+	}
+	switch h := headers.(type) {
+	case map[string]string:
+		for k, v := range h {
+			base.Header[k] = []string{v}
+		}
+	case map[string][]string:
+		for k, v := range h {
+			base.Header[k] = v
+		}
+	case http.Header:
+		for k, v := range h {
+			base.Header[k] = v
+		}
+	case map[string]interface{}:
+		for k, v := range h {
+			switch val := v.(type) {
+			case string:
+				base.Header[k] = []string{val}
+			case []string:
+				base.Header[k] = val
+			default:
+				base.Header[k] = []string{fmt.Sprint(val)}
+			}
 		}
 	default:
-		base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", reflect.TypeOf(kind)))
+		base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", headers))
 	}
 	return base
 }
 
 func (base *Requester) setMapStringHeaders(headers map[string][]string) *Requester {
-	base.Header = headers
+	for k, v := range headers {
+		base.Header[k] = v
+	}
 	return base
 }
 
 func (base *Requester) setMapAnyHeaders(headers map[string]interface{}) *Requester {
 	for k, v := range headers {
 		switch value := v.(type) {
+		case string:
+			base.Header[k] = []string{value}
 		case []string:
 			base.Header[k] = value
 		default:
-			base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", reflect.TypeOf(value)))
+			base.Header[k] = []string{fmt.Sprint(value)}
 		}
 	}
 	return base
 }
 
 func (base *Requester) SetContentType(contentType string) *Requester {
-	switch bunker.IsEmptyString(contentType) {
-	case true:
-		base.Header["Content-Type"] = append(base.Header["Content-Type"], contentType)
-	default:
-		base.Header["Content-Type"] = append(base.Header["Content-Type"], Json)
+	if bunker.IsEmptyString(contentType) {
+		base.Header["Content-Type"] = []string{Json}
+	} else {
+		base.Header["Content-Type"] = []string{contentType}
 	}
 	return base
 }
 
 func (base *Requester) initClient() *Requester {
+	if base.Client != nil {
+		base.Client.Timeout = base.TimeOut
+		return base
+	}
 	jar, errCookie := cookiejar.New(&cookiejar.Options{
 		PublicSuffixList: publicsuffix.List,
 	})
@@ -184,17 +210,17 @@ func (base *Requester) SetTimeout(timeOut time.Duration) *Requester {
 }
 
 func (base *Requester) initRequestClient() bool {
+	if bunker.IsEmptyString(base.Method) {
+		base.Errors = append(base.Errors, errors.New("the request method has not been selected"))
+		return false
+	}
+
 	if base.initRequest().HaveError() {
 		return false
 	}
 
-	if bunker.IsEmptyString(base.Request.Header.Get("Content-Type")) {
-		base.Request.Header.Add("Content-Type", Json)
-	}
-
-	if bunker.IsEmptyString(base.Method) {
-		base.Errors = append(base.Errors, errors.New("the request method has not been selected"))
-		return false
+	if (base.body != nil || len(base.bodyBytes) > 0) && bunker.IsEmptyString(base.Request.Header.Get("Content-Type")) {
+		base.Request.Header.Set("Content-Type", Json)
 	}
 
 	if base.initClient().HaveError() {
@@ -206,7 +232,7 @@ func (base *Requester) initRequestClient() bool {
 
 func (base *Requester) Do() *Requester {
 	defer func() {
-		if base.HaveError() {
+		if base.HaveError() && (base.Debug || os.Getenv("debug") == "true") {
 			bunker.PrintErr(fmt.Sprint(base.Errors))
 		}
 	}()
@@ -226,6 +252,7 @@ func (base *Requester) Do() *Requester {
 		base.Response = response
 	default:
 		base.Errors = append(base.Errors, fmt.Errorf("unsupported method of %s", base.Method))
+		return base
 	}
 	base.timeRequest = time.Since(startTime)
 	base.timeIn = time.Now()
@@ -234,7 +261,14 @@ func (base *Requester) Do() *Requester {
 }
 
 func (base *Requester) initRequest() *Requester {
-	request, errRequest := http.NewRequest(base.Method, base.BaseUrl, base.body)
+	var bodyReader io.Reader
+	if len(base.bodyBytes) > 0 {
+		bodyReader = bytes.NewReader(base.bodyBytes)
+	} else if base.body != nil {
+		bodyReader = base.body
+	}
+
+	request, errRequest := http.NewRequest(base.Method, base.BaseUrl, bodyReader)
 	if errRequest != nil {
 		base.Errors = append(base.Errors, errRequest)
 		return base
@@ -243,15 +277,20 @@ func (base *Requester) initRequest() *Requester {
 		request = request.WithContext(base.Context)
 	}
 	if base.Header != nil {
-		request.Header = base.Header
+		for k, v := range base.Header {
+			request.Header[k] = v
+		}
 	}
-	if base.basicAuth != nil {
+	if base.hasBasicAuth {
+		request.SetBasicAuth(base.basicAuthUser, base.basicAuthPass)
+	} else if len(base.basicAuth) > 0 {
 		for user, pass := range base.basicAuth {
 			request.SetBasicAuth(user, pass)
+			break
 		}
 	}
 	if !bunker.IsEmptyString(base.token) {
-		request.Header.Add(Auth, Bearer+base.token)
+		request.Header.Set(Auth, Bearer+base.token)
 	}
 
 	reqUrl := request.URL.Query()
@@ -261,11 +300,17 @@ func (base *Requester) initRequest() *Requester {
 		}
 	}
 	request.URL.RawQuery = reqUrl.Encode()
+
 	if !bunker.IsEmptyString(base.path) {
-		if !bunker.IsEmptyString(request.URL.Path) {
-			request.URL.Path += base.path
+		p := base.path
+		if bunker.IsEmptyString(request.URL.Path) || request.URL.Path == "/" {
+			if !strings.HasPrefix(p, "/") {
+				request.URL.Path = "/" + p
+			} else {
+				request.URL.Path = p
+			}
 		} else {
-			request.URL.Path = base.path
+			request.URL.Path = strings.TrimRight(request.URL.Path, "/") + "/" + strings.TrimLeft(p, "/")
 		}
 	}
 	base.Request = request
@@ -339,6 +384,9 @@ func (base *Requester) readAll(input io.ReadCloser) []byte {
 }
 
 func (base *Requester) readBodyRequest() []byte {
+	if len(base.bodyBytes) > 0 {
+		return base.bodyBytes
+	}
 	if base.Request != nil && base.Request.Body != nil {
 		result, err := io.ReadAll(base.Request.Body)
 		if err != nil {
@@ -346,56 +394,103 @@ func (base *Requester) readBodyRequest() []byte {
 			return nil
 		}
 		base.Request.Body = io.NopCloser(bytes.NewBuffer(result))
+		base.bodyBytes = result
 		return result
 	}
 	return nil
 }
 
 func (base *Requester) SetPayload(body interface{}) *Requester {
-	switch reflect.ValueOf(body).Kind() {
-	case reflect.Map:
-		base.setBodyMap(body)
-	case reflect.Struct:
-		base.setBodyStruct(body)
-	case reflect.String:
-		base.setBodyString(body)
+	if body == nil {
+		return base
+	}
+	switch v := body.(type) {
+	case string:
+		base.bodyBytes = []byte(v)
+		base.body = strings.NewReader(v)
+	case []byte:
+		base.bodyBytes = v
+		base.body = bytes.NewReader(v)
+	case io.Reader:
+		data, err := io.ReadAll(v)
+		if err != nil {
+			base.Errors = append(base.Errors, err)
+			return base
+		}
+		base.bodyBytes = data
+		base.body = bytes.NewReader(data)
 	default:
-		base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", reflect.TypeOf(body)))
+		dataMarshal, errMarshal := json.Marshal(body)
+		if errMarshal != nil {
+			base.Errors = append(base.Errors, errMarshal)
+			return base
+		}
+		base.bodyBytes = dataMarshal
+		base.body = bytes.NewReader(dataMarshal)
 	}
 	return base
 }
 
 func (base *Requester) AddPath(path string) *Requester {
-	base.path = path
+	if bunker.IsEmptyString(path) {
+		return base
+	}
+	if bunker.IsEmptyString(base.path) {
+		base.path = path
+	} else {
+		base.path = strings.TrimRight(base.path, "/") + "/" + strings.TrimLeft(path, "/")
+	}
 	return base
 }
 
 func (base *Requester) Query(query interface{}) *Requester {
-	switch reflect.ValueOf(query).Kind() {
-	case reflect.String:
-		if input, isString := query.(string); isString {
-			base.queryString(input)
+	if query == nil {
+		return base
+	}
+	switch input := query.(type) {
+	case string:
+		base.queryString(input)
+	case url.Values:
+		for k, vals := range input {
+			for _, v := range vals {
+				base.QueryData.Add(k, v)
+			}
 		}
-	case reflect.Map:
-		switch input := query.(type) {
-		case map[string]string:
-			base.queryMap(input)
-		default:
-			base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", reflect.TypeOf(query)))
+	case map[string][]string:
+		for k, vals := range input {
+			for _, v := range vals {
+				base.QueryData.Add(k, v)
+			}
+		}
+	case map[string]string:
+		base.queryMap(input)
+	case map[string]interface{}:
+		for k, v := range input {
+			base.QueryData.Add(k, fmt.Sprint(v))
 		}
 	default:
-		base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", reflect.TypeOf(query)))
+		switch reflect.ValueOf(query).Kind() {
+		case reflect.String:
+			base.queryString(fmt.Sprint(query))
+		case reflect.Map:
+			base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", query))
+		default:
+			base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", query))
+		}
 	}
 	return base
 }
 
 func (base *Requester) queryString(input string) *Requester {
-	if values, errParse := url.ParseQuery(input); errParse != nil {
+	cleanInput := strings.TrimPrefix(input, "?")
+	values, errParse := url.ParseQuery(cleanInput)
+	if errParse != nil {
 		base.Errors = append(base.Errors, errParse)
 		return base
-	} else {
-		for param := range values {
-			base.QueryData.Add(param, values.Get(param))
+	}
+	for param, vals := range values {
+		for _, v := range vals {
+			base.QueryData.Add(param, v)
 		}
 	}
 	return base
@@ -409,48 +504,34 @@ func (base *Requester) queryMap(input map[string]string) *Requester {
 }
 
 func (base *Requester) setBodyMap(input interface{}) {
-	switch data := input.(type) {
-	case map[string]interface{}, map[string]string:
-		base.setBodyMapString(data)
-	default:
-		base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", reflect.TypeOf(data)))
-	}
+	base.SetPayload(input)
 }
 
 func (base *Requester) setBodyMapString(input interface{}) *Requester {
-	dataMarshal, errMarshal := json.Marshal(input)
-	if errMarshal != nil {
-		base.Errors = append(base.Errors, errMarshal)
-		return base
-	}
-
-	base.body = strings.NewReader(string(dataMarshal))
-	return base
+	return base.SetPayload(input)
 }
 
 func (base *Requester) setBodyStruct(input interface{}) *Requester {
-	dataMarshal, errMarshal := json.Marshal(input)
-	if errMarshal != nil {
-		base.Errors = append(base.Errors, errMarshal)
-		return base
-	}
-
-	base.body = strings.NewReader(string(dataMarshal))
-	return base
+	return base.SetPayload(input)
 }
 
 func (base *Requester) setBodyString(input interface{}) *Requester {
-	switch data := input.(type) {
-	case string:
-		base.body = strings.NewReader(data)
-	default:
-		base.Errors = append(base.Errors, fmt.Errorf("unsupported type of %T", reflect.TypeOf(data)))
-	}
-	return base
+	return base.SetPayload(input)
 }
 
 func (base *Requester) debug() string {
 	if base.Request != nil {
+		var responseBody string
+		if base.Response != nil && base.Response.Body != nil {
+			bodyBytes := base.readAll(base.Response.Body)
+			responseBody = string(bodyBytes)
+			base.Response.Body.Close()
+			base.Response.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
+		status := "No Response"
+		if base.Response != nil {
+			status = base.Response.Status
+		}
 		return fmt.Sprintf(
 			`
 	REQUEST
@@ -478,10 +559,10 @@ func (base *Requester) debug() string {
 			base.Request.URL,
 			base.headerToString(),
 			string(base.readBodyRequest()),
-			base.Response.Status,
+			status,
 			base.timeIn.Format(time.RFC1123),
 			base.timeRequest.Seconds(),
-			string(base.readAll(base.Response.Body)),
+			responseBody,
 		)
 	} else {
 		base.Errors = append(base.Errors, errors.New("can't debug before request"))
@@ -490,9 +571,38 @@ func (base *Requester) debug() string {
 }
 
 func (base *Requester) headerToString() (result string) {
-	if base.Request.Header != nil {
+	if base.Request != nil && base.Request.Header != nil {
 		header, _ := json.Marshal(base.Request.Header)
 		return string(header)
 	}
-	return
+	return ""
+}
+
+// BodyBytes returns the response body as bytes, preserving the body for further reads.
+func (base *Requester) BodyBytes() []byte {
+	if base.Response == nil || base.Response.Body == nil {
+		return nil
+	}
+	data, err := io.ReadAll(base.Response.Body)
+	if err != nil {
+		base.Errors = append(base.Errors, err)
+		return nil
+	}
+	base.Response.Body.Close()
+	base.Response.Body = io.NopCloser(bytes.NewBuffer(data))
+	return data
+}
+
+// BodyString returns the response body as a string.
+func (base *Requester) BodyString() string {
+	return string(base.BodyBytes())
+}
+
+// Bind unmarshals the response JSON payload into dest.
+func (base *Requester) Bind(dest interface{}) error {
+	data := base.BodyBytes()
+	if len(data) == 0 {
+		return errors.New("empty response body")
+	}
+	return json.Unmarshal(data, dest)
 }

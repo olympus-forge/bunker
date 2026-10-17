@@ -1,9 +1,9 @@
-package bunker
+package chronos
 
 import "time"
 
-type goTimesImpl interface {
-	SetToday(today *time.Time) *gotimes
-	SetHolidays(h []time.Time) *gotimes
+type GoTimesImpl interface {
+	SetToday(today *time.Time) *GoTimes
+	SetHolidays(h []time.Time) *GoTimes
 	AddWeekDay(sla int) (t time.Time)
 }
