@@ -1,4 +1,4 @@
-module github.com/yudhiana/bunker
+module github.com/olympus-forge/bunker
 
 go 1.19
 
